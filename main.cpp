@@ -1,7 +1,5 @@
-#include <cstddef>
 #include <initializer_list>
 #include <iostream>
-#include <iterator>
 #include <stdexcept>
 #include <utility>
 
@@ -53,13 +51,6 @@ public:
         Node *node;
 
     public:
-        // эти typedef нужны std::reverse_iterator (для rbegin/rend)
-        using iterator_category = std::bidirectional_iterator_tag;
-        using value_type = int;
-        using difference_type = std::ptrdiff_t;
-        using pointer = int *;
-        using reference = int &;
-
         iterator() : table(nullptr), bucket(0), node(nullptr) {
         }
 
@@ -152,12 +143,69 @@ public:
         return const_cast<HashTable *>(this)->end();
     }
 
-    auto rbegin() {
-        return std::reverse_iterator<iterator>(end());
+    // свой обратный итератор: ++ идет назад, -- вперед
+    // хранит позицию ПОСЛЕ текущего элемента (как std::reverse_iterator), поэтому rend() это просто begin(),
+    // и не нужно уходить "перед первым элементом", куда обычный итератор не умеет
+    class reverse_iterator {
+    private:
+        iterator it;
+
+    public:
+        reverse_iterator(iterator it) : it(it) {
+        }
+
+        reverse_iterator(const reverse_iterator &) = default;
+
+        reverse_iterator &operator=(const reverse_iterator &) = default;
+
+        reverse_iterator &operator++() {
+            --it;
+            return *this;
+        }
+
+        reverse_iterator operator++(int) {
+            reverse_iterator old = *this;
+            --it;
+            return old;
+        }
+
+        reverse_iterator &operator--() {
+            ++it;
+            return *this;
+        }
+
+        reverse_iterator operator--(int) {
+            reverse_iterator old = *this;
+            ++it;
+            return old;
+        }
+
+        // текущий элемент это тот, что перед it
+        int &operator*() {
+            iterator tmp = it;
+            return *--tmp;
+        }
+
+        int key() const {
+            iterator tmp = it;
+            return (--tmp).key();
+        }
+
+        friend bool operator==(const reverse_iterator &a, const reverse_iterator &b) {
+            return a.it == b.it;
+        }
+
+        friend bool operator!=(const reverse_iterator &a, const reverse_iterator &b) {
+            return !(a == b);
+        }
+    };
+
+    reverse_iterator rbegin() {
+        return reverse_iterator(end());
     }
 
-    auto rend() {
-        return std::reverse_iterator<iterator>(begin());
+    reverse_iterator rend() {
+        return reverse_iterator(begin());
     }
 
     HashTable(std::initializer_list<std::pair<int, int> > list) : HashTable() {
